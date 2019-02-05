@@ -1,8 +1,8 @@
 import numpy as np  
 import cv2  
 import dlib  
-
-imagePath = "test.jpeg"  
+from main import detectPupil
+ 
 cascPath = "haarcascade_frontalface_default.xml"  
 PREDICTOR_PATH = "shape_predictor_68_face_landmarks.dat"  
 
@@ -20,49 +20,66 @@ faceCascade = cv2.CascadeClassifier(cascPath)
 
 predictor = dlib.shape_predictor(PREDICTOR_PATH)  
 
-# Read the image  
-image = cv2.imread(imagePath)  
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  
 
-# Detect faces in the image  
-faces = faceCascade.detectMultiScale(  
-gray,  
-scaleFactor=1.05,  
-minNeighbors=5,  
-minSize=(100, 100),  
-flags=cv2.CASCADE_SCALE_IMAGE  
-)  
+video_capture = cv2.VideoCapture(0)
 
-print("Found {0} faces!".format(len(faces)))  
+while(True):
+    # Read the image  
+    ret, frame = video_capture.read()
 
-# Draw a rectangle around the faces  
-for (x, y, w, h) in faces:  
-    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)  
+    image = cv2.flip(frame,1)  
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  
 
-    # Converting the OpenCV rectangle coordinates to Dlib rectangle  
-    dlib_rect = dlib.rectangle(int(x), int(y), int(x + w), int(y + h))  
+    # Detect faces in the image  
+    faces = faceCascade.detectMultiScale(  
+    gray,  
+    scaleFactor=1.05,  
+    minNeighbors=5,  
+    minSize=(100, 100),  
+    flags=cv2.CASCADE_SCALE_IMAGE  
+    )  
 
-    landmarks = np.matrix([[p.x, p.y]  
-           for p in predictor(image, dlib_rect).parts()])  
+    #print("Found {0} faces!".format(len(faces)))  
 
-    landmarks_display = landmarks[RIGHT_EYE_POINTS]  
-    maxX,minX,maxY,minY = (0,640,0,480)
-    for idx, point in enumerate(landmarks_display):
-        print point  
-        pos = (point[0, 0], point[0, 1])
-        ptx = point[0, 0]
-        pty = point[0,1]
+    # Draw a rectangle around the faces  
+    for (x, y, w, h) in faces:  
+        cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)  
 
-        maxX = max(maxX,ptx)
-        minX = min(minX,ptx)
-        maxY = max(maxY,pty)
-        minY = min(minY,pty)  
-        cv2.circle(image, pos, 2, color=(0, 255, 255), thickness=-1)
+        # Converting the OpenCV rectangle coordinates to Dlib rectangle  
+        dlib_rect = dlib.rectangle(int(x), int(y), int(x + w), int(y + h))  
 
-    cv2.rectangle(image, (minX, minY), (maxX, maxY), (0, 255, 0), 0) 
-    roi = image[minY+3:maxY-3, minX+3:maxX-3]
-    cv2.imshow("roi.jpg", roi)
+        landmarks = np.matrix([[p.x, p.y]  
+               for p in predictor(image, dlib_rect).parts()])  
 
-cv2.imshow("Landmarks found", image)  
-cv2.waitKey(0)
-exit()
+        landmarks_display = landmarks[RIGHT_EYE_POINTS]
+
+        if landmarks_display is None:
+            continue
+
+        maxX,minX,maxY,minY = (0,640,0,480)
+        for idx, point in enumerate(landmarks_display):
+            pos = (point[0, 0], point[0, 1])
+            ptx = point[0, 0]
+            pty = point[0,1]
+
+            maxX = max(maxX,ptx)
+            minX = min(minX,ptx)
+            maxY = max(maxY,pty)
+            minY = min(minY,pty)  
+            cv2.circle(image, pos, 0, color=(0, 255, 255), thickness=-1)
+
+        roi = image[minY+1:maxY-1, minX+1:maxX-1]
+        
+        try:
+            (pup_x,pup_y),pupil_frame =  (detectPupil(roi))
+            cv2.imshow("pupil",pupil_frame)
+        except Exception as e:
+            print e
+        cv2.rectangle(image, (minX, minY), (maxX, maxY), (0, 255, 0), 0) 
+        
+    cv2.imshow("Landmarks found", image)  
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+video_capture.release()
+cv2.destroyAllWindows()

@@ -4,7 +4,7 @@ import argparse
 import cv2
 
 def detectPupil(image):
-
+    cv2.imshow("eye_image",image)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     blur = cv2.GaussianBlur(gray,(5,5),0)
@@ -20,6 +20,8 @@ def detectPupil(image):
     drawing = np.copy(gray)
 
     print(len(contours))
+
+    center = None
 
     for idx,contour in enumerate(contours):
 
@@ -44,6 +46,11 @@ def detectPupil(image):
                 center = (int(m['m10'] / m['m00']), int(m['m01'] / m['m00']))
                 cv2.circle(image, center, 0, (0,0,255), -1)
 
+            #cx and cy are centers of the image
+            # draw line from center to contour center
+            cx, cy = image.shape[1]//2,image.shape[0]//2    
+            cv2.line(image,(cx,cy),(center[0],center[1]),(128,0,128),1)
+            
             # fit an ellipse around the contour and draw it into the image
             try:
                 ellipse = cv2.fitEllipse(contour)
