@@ -3,53 +3,64 @@ import numpy as np
 import argparse
 import cv2
 
-# construct the argument parse and parse the arguments
+def detectPupil(image):
 
-img = cv2.imread('imgs/5.png', 0)
-orig = cv2.imread('imgs/5.png',0)
-cv2.imshow('rgb orig',orig)
-# Otsu's thresholding after Gaussian filtering
-blur = cv2.GaussianBlur(img,(5,5),0)
-ret3,th3 = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-th3 = cv2.bitwise_not(th3)
-cv2.imshow('th',th3)
-thresholded, contours, hierarchy = cv2.findContours(th3, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-drawing = np.copy(img)
-# cv2.drawContours(drawing, contours, -1, (255, 0, 0), 2)
+    blur = cv2.GaussianBlur(gray,(5,5),0)
+    
+    # Otsu's thresholding after Gaussian filtering
+    ret3,otsu_thresh = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    
+    inverted_image = cv2.bitwise_not(otsu_thresh)
 
-print(len(contours))
 
-for contour in contours:
-    area = cv2.contourArea(contour)
+    contours, hierarchy = cv2.findContours(inverted_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    if(area>500):
-        print(area)
-        cv2.drawContours(drawing, contour, -1, (255, 0, 0), 2)
-        bounding_box = cv2.boundingRect(contour)
+    drawing = np.copy(gray)
 
-        extend = area / (bounding_box[2] * bounding_box[3])
+    print(len(contours))
 
-        # reject the contours with big extend
-        if extend > 0.8:
-            continue
+    for idx,contour in enumerate(contours):
 
-        # calculate countour center and draw a dot there
-        m = cv2.moments(contour)
-        if m['m00'] != 0:
-            center = (int(m['m10'] / m['m00']), int(m['m01'] / m['m00']))
-            cv2.circle(drawing, center, 3, (0,255,0), -1)
+        area = cv2.contourArea(contour)
+        
+        if(area>100):
+            print("contour {} area: {}".format(idx,area))
 
-        # fit an ellipse around the contour and draw it into the image
-        try:
-            ellipse = cv2.fitEllipse(contour)
-            cv2.ellipse(drawing, box=ellipse, color=(0, 255, 0))
-        except:
-            pass
+            cv2.drawContours(drawing, [contour], 0, (255, 0, 0), 0)
+            
+            bounding_box = cv2.boundingRect(contour)
+
+            extend = area / (bounding_box[2] * bounding_box[3])
+
+            # reject the contours with big extend
+            if extend > 0.8:
+                continue
+
+            # calculate countour center and draw a dot there
+            m = cv2.moments(contour)
+            if m['m00'] != 0:
+                center = (int(m['m10'] / m['m00']), int(m['m01'] / m['m00']))
+                cv2.circle(image, center, 0, (0,0,255), -1)
+
+            # fit an ellipse around the contour and draw it into the image
+            try:
+                ellipse = cv2.fitEllipse(contour)
+                cv2.ellipse(image, box=ellipse, color=(0, 255, 0))
+            except:
+                pass
+
+    return (center,image)
 
 # show the frame
-cv2.imshow("Drawing",drawing)
-print(drawing.shape)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    file_name = raw_input("enter the name of file: ")
+    print file_name
+    image = cv2.imread(file_name,1)
+    (pupil_x,pupil_y),image_with_pupil = detectPupil(image)
+    cv2.imshow("detected_pupil",image_with_pupil)
+    #print(drawing.shape)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
