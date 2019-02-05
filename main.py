@@ -1,7 +1,7 @@
 import numpy as np  
 import cv2  
 import dlib  
-from main import detectPupil
+from eye_pupil_detection import detectPupil
  
 cascPath = "haarcascade_frontalface_default.xml"  
 PREDICTOR_PATH = "shape_predictor_68_face_landmarks.dat"  
